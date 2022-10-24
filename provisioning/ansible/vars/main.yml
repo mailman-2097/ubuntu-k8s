@@ -1,0 +1,10 @@
+---
+
+container_count: 1
+default_container_name: docker
+default_container_image: ubuntu
+default_container_command: sleep 1d
+
+octopus_container_image: ubuntu
+
+lsb_release: focal

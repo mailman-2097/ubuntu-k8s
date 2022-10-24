@@ -1,0 +1,66 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+IP_SRVR = "192.168.20.20"
+i=1
+IP_APOOL= "192.168.20.#{i + 20}"
+
+VAGRANTFILE_API_VERSION = "2"
+# BOX_IMAGE = "ubuntu/focal64"
+BOX_IMAGE = "ubuntu/jammy64"
+AUTOSTART = true
+
+$dns_script = <<SCRIPT
+echo "$1	kontroller.local	 kontroller" >> /etc/hosts 
+echo "$1	agentpool.local	 agentpool" >> /etc/hosts 
+SCRIPT
+
+Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
+
+config.vm.define "kontroller", autostart: AUTOSTART	do |master|
+		master.vm.box = BOX_IMAGE
+		master.vm.hostname = 'kontroller.local'
+		master.vm.network :private_network, ip: IP_SRVR
+		master.vm.network :forwarded_port, guest: 22, host: 7722, id: "ssh"
+    	master.vm.synced_folder ".", "/vagrant", owner: "vagrant", group: "vagrant"
+
+		master.vm.provision "shell" do |s|
+			s.inline = $dns_script
+			s.args = [IP_SRVR]
+		end
+
+		master.vm.provision "shell", path: "script/setup.sh"
+		master.vm.provision "shell", path: "script/setup-kube.sh"
+
+		master.vm.provider :virtualbox do |vb|
+					vb.customize ["modifyvm", :id, "--natdnshostresolver1", "on"]
+					vb.customize ["modifyvm", :id, "--memory", 6666]
+					vb.customize ["modifyvm", :id, "--name", "kontroller"]
+					vb.customize ["modifyvm", :id, "--cpus", "2"]
+		end
+end
+
+config.vm.define "agentpool", autostart: AUTOSTART	do |node|
+	node.vm.box = BOX_IMAGE
+	node.vm.hostname = 'agentpool.local'
+	node.vm.network :private_network, ip: IP_APOOL
+	node.vm.network :forwarded_port, guest: 22, host: 7723, id: "ssh"
+	node.vm.synced_folder ".", "/vagrant", owner: "vagrant", group: "vagrant"
+
+	node.vm.provision "shell" do |s|
+		s.inline = $dns_script
+		s.args = [IP_APOOL]
+	end
+
+	node.vm.provision "shell", path: "script/setup.sh"
+	node.vm.provision "shell", path: "script/setup-kind.sh"
+
+	node.vm.provider :virtualbox do |vb|
+				vb.customize ["modifyvm", :id, "--natdnshostresolver1", "on"]
+				vb.customize ["modifyvm", :id, "--memory", 6666]
+				vb.customize ["modifyvm", :id, "--name", "agentpool"]
+				vb.customize ["modifyvm", :id, "--cpus", "2"]
+	end
+end
+
+end

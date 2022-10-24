@@ -1,0 +1,18 @@
+---
+- hosts: localhost
+  gather_facts: yes
+  become: yes
+
+  vars_files:
+    - vars/main.yml
+
+  pre_tasks:
+    - name: Update apt cache if needed.
+      apt: update_cache=yes cache_valid_time=86400
+      become: yes
+
+  handlers:
+    - import_tasks: handlers/handlers.yml
+
+  tasks:
+    - import_tasks: tasks/docker-engine.yml
