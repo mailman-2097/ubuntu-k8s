@@ -1,0 +1,33 @@
+# ~/pvc-dynamic.yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: my-dynamic-hostpath-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: standard # VERY IMPORTANT !
+  resources:
+    requests:
+      storage: 1Gi
+  selector:
+    matchLabels:
+       type: hostpath
+       env: prod 
+---
+# ~/pvc-dynamic.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx-dynamic-storage  
+spec:
+  containers:
+  - image: nginx
+    name: nginx
+    volumeMounts:
+      - mountPath: "/var/www/html"
+        name: mypersistentvolume
+  volumes:
+    - name: mypersistentvolume
+      persistentVolumeClaim:
+        claimName: my-dynamic-hostpath-pvc   

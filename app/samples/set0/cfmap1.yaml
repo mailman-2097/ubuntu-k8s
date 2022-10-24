@@ -1,0 +1,27 @@
+apiVersion: v1
+data:
+  config.yaml: |
+    tags:
+    - db: msql
+    - cloud=kind
+    - production=true
+    hello:
+    - world
+  env.dev: |
+    db=msql
+    cloud=kind
+    production=true
+    hello=world
+  environment: dev
+  stack: blue
+  version: "1"
+kind: ConfigMap
+metadata:
+  annotations:
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"v1","data":{"config.yaml":"tags:\n- db: msql\n- cloud=kind\n- production=true\nhello:\n- world\n","env.dev":"db=msql\ncloud=kind\nproduction=true\nhello=world\n","environment":"dev","stack":"blue","version":"1"},"kind":"ConfigMap","metadata":{"annotations":{},"name":"genericmap","namespace":"default"}}
+  creationTimestamp: "2022-08-17T13:27:13Z"
+  name: genericmap1
+  namespace: default
+  resourceVersion: "32786"
+  uid: c908677d-b538-45e9-869f-9a5690ade27d

@@ -1,0 +1,18 @@
+# ~/Pod.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx 
+spec:
+  containers:
+  - image: nginx
+    name: nginx
+    volumeMounts:
+      # name must match the volume name below
+      - mountPath: "/var/www/html"
+        name: volume1
+  volumes:
+    - name: volume1
+      persistentVolumeClaim:
+        # referenced by name so must be in same namespace as pod
+        claimName: pvc-hostpath-var 

@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: pvc-hostpath-var
+spec:
+  resources:
+    requests:
+      storage: 10Gi
+  accessModes:
+    - ReadWriteOnce
+  selector:
+    matchLabels:
+       type: hostpath
+       env: prod  

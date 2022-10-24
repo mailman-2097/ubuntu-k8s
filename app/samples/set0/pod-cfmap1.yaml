@@ -1,0 +1,37 @@
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx-configmap1
+spec:
+  volumes:
+  - name: config-8080
+    configMap:
+      name: nginx-conf-9080
+  - name: config-9080
+    configMap:
+      name: nginx-conf-8080
+  containers:
+    - name: nginx-configmap1-select
+      image: nginx:latest
+      ports:
+        - containerPort: 9080
+      volumeMounts:
+      - name: config-9080
+        mountPath: /etc/nginx/conf.d
+      env:
+        - name: YAML #Any other name works here.
+          valueFrom:
+            configMapKeyRef:
+              name: genericmap1
+              key: config.yaml
+    - name: nginx-configmap1-all
+      image: nginx:latest
+      ports:
+        - containerPort: 8080
+      volumeMounts:
+      - name: config-8080
+        mountPath: /etc/nginx/conf.d
+      envFrom:
+        - configMapRef:
+            name: genericmap1

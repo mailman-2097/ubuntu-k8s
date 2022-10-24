@@ -1,0 +1,11 @@
+# ~/resourcequota.yaml
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: my-resourcequota 
+spec: 
+  hard:
+    requests.cpu: "1000m"
+    requests.memory: "1Gi"
+    limits.cpu: "2000m"
+    limits.memory: "2Gi"

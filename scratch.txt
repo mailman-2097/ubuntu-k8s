@@ -1,0 +1,271 @@
+# set -o noclobber
+printf "alias k=kubectl" | tee -a /home/$USER/.bash_aliases && source ~/.bashrc
+mkdir -p /home/$USER/.kube/
+
+cp /vagrant/provisioning/kind_cluster.yml /home/$USER/.kube/kind_cluster
+kind create cluster --config ~/.kube/kind_cluster
+kind create cluster --name agentpool --config ~/.kube/kind_cluster
+kind stop
+kind delete cluster
+
+minikube start
+
+kubectl cluster-info --context kind-kind
+kubectl port-forward --address 0.0.0.0 nginx-pod 8080:80
+kubectl exec -ti nginx-pod -- bash
+kubectl delete pod nginx-pod
+kubectl delete -f nginx-pod.yaml
+kubectl apply -f nginx-pod.yaml
+kubectl get pods --show-labels -o wide
+kubectl label pods nginx-pod stack=blue
+kubectl label pods nginx-pod stack=green --overwrite
+kubectl logs -f job.batch/hello-world-job
+kubectl get pods --watch
+
+kubectl get cronjob hello
+kubectl get jobs --watch
+
+kubectl describe pod nginx-pod
+kubectl logs --tail 10 nginx-pod
+docker exec -it kind-worker bash
+kubectl get events
+
+kubectl get pods -o json
+kubectl get pods -o=jsonpath='{.items[*]}' | jq
+kubectl get pods -o=jsonpath='{.items[*].spec.containers[*]}' | jq
+kubectl exec -ti nginx-pod-mc --container nginx-container -- /bin/bash
+kubectl get pods -w
+kubectl logs -f nginx-with-init-container --container nginx-container
+kubectl logs -f --tail=30 nginx-with-init-container --container nginx-container
+
+kubectl exec two-containers-with-empty-dir --container nginx-container -- ls /var
+kubectl exec two-containers-with-empty-dir --container busybox-container -- ls /var
+kubectl exec two-containers-with-empty-dir --container nginx-container -- /bin/sh -c "echo 'hello world' >> /var/empty-dir-volume-path/hello-world.txt"
+kubectl exec two-containers-with-empty-dir --container nginx-container -- cat /var/empty-dir-volume-path/hello-world.txt
+kubectl exec two-containers-with-empty-dir --container busybox-container -- cat /var/empty-dir-volume-path/hello-world.txt
+
+docker exec -it kind-worker bash # create test file
+kubectl exec mc-with-host-path --container nginx-container -- ls -al /share # see here
+
+kubectl describe configmap/genericmap
+
+kubectl create -f cfmap.yaml -f pod-cfmap.yaml
+kubectl exec nginx-configmap --container nginx-configmap-select -- env 
+
+kubectl get configmaps genericmap -o yaml
+kubectl create configmap env.dev --from-file=cfmap.env.dev
+
+kubectl create configmap nginx-conf-8080 --from-file 8080.conf
+kubectl create configmap nginx-conf-9080 --from-file 9080.conf
+
+kubectl create -f cfmap1.yaml -f pod-cfmap1.yaml
+kubectl exec nginx-configmap1 --container nginx-configmap1-select -- env 
+kubectl exec nginx-configmap1 --container nginx-configmap1-all -- env 
+
+kubectl logs -f --tail=30 nginx-configmap1 --container nginx-configmap1-all
+kubectl delete -f cfmap.yaml -f pod-cfmap.yaml -f cfmap1.yaml -f pod-cfmap1.yaml
+kubectl delete configmap nginx-conf-8080
+kubectl delete configmap nginx-conf-9080
+
+kubectl run nginx --image nginx:latest --expose  --port 80 # expose as service 
+kubectl apply -f https://k8s.io/examples/admin/dns/dnsutils.yaml
+kubectl get pods/dnsutils
+kubectl exec -ti dnsutils -- nslookup nginx.default.svc.cluster.local # accessing the service
+kubectl exec -ti dnsutils -- curl nginx.default.svc.cluster.local
+
+kubectl run whoami1 --image='containous/whoami' --port=80 --labels="app=whoami"
+kubectl run whoami2 --image='containous/whoami' --port=80 --labels="app=whoami"
+
+kubectl exec -ti dnsutils -- apt update && apt install curl -y 
+kubectl exec -ti dnsutils -- curl nodeport-tinygo.default.svc.cluster.local
+
+docker exec -it kind-worker curl localhost:30001 # Nodeport limited to 30000-32767 
+docker exec -it kind-worker2 curl localhost:30001 # 
+
+# Links
+https://www.iamgini.com/kind
+https://www.reddit.com/r/kubernetes/comments/jp2ia9/crashloopbackoff_status_using_busybox_images/
+https://www.mirantis.com/blog/multi-container-pods-and-container-communication-in-kubernetes/
+https://www.mendrugory.com/post/remote-kind/
+
+# multiple minikubes
+
+minikube start --profile cluster1
+minikube start --profile cluster2
+kubectl config get-contexts
+kubectl config use-context cluster1
+minikube delete --profile cluster2
+minikube delete --profile cluster1
+
+$ kubectl run nginx-1 --image nginx  --labels 'app=nginx-1'
+pod/nginx-1 created
+$ kubectl run nginx-2 --image nginx --labels 'app=nginx-2'
+
+# For Network Policy
+minikube start --network-plugin=cni --cni=calico --profile cluster1
+
+kubectl api-resources --namespace false
+
+kubectl config set-context $(kubectl config current-context) --namespace=tier-web # default
+kubectl config view | grep -i "namespace"
+
+kubectl create -f ~/rq.yaml --namespace=custom-ns
+
+kubectl api-resources --namespaced=false --sort-by=name
+kubectl patch pv/pv-hostpath-var -p '{"spec":{"persistentVolumeReclaimPolicy":"Recycle"}}'
+
+kubectl exec -it nginx-rs-probes-1-dv9qn -- rm /usr/share/nginx/html/index.html
+kubectl describe pod nginx-rs-probes-1-dv9qn
+
+# does not delete pods
+kubectl delete rs/nginx-replicaset-livenessprobe-example --cascade=orphan
+
+# BG vs rolling update k8s
+https://www.haproxy.com/blog/rolling-updates-and-blue-green-deployments-with-kubernetes-and-haproxy/
+# https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.19/#deploymentspec-v1-apps
+
+kubectl apply -f ./dep1-rollingupdate.yaml --record
+kubectl rollout status deployment nginx-rolling-1
+kubectl get deploy nginx-rolling-1
+kubectl get rs nginx-rolling-1
+
+kubectl port-forward --address 0.0.0.0 service/nginx-rolling-1-svc 30000:80
+
+kubectl run -i --tty busybox --image=busybox --rm --restart=Never -- sh
+kubectl run -i --tty alpine --image=alpine --rm --restart=Never -- sh
+apk --update add curl bash
+
+curl nginx-rolling-1-svc.default.svc.cluster.local
+curl nginx-rolling-1-svc
+
+kubectl set image deployment nginx-rolling-1 nginx=nginx:1.18
+kubectl rollout status deployment nginx-rolling-1
+kubectl rollout history deploy nginx-rolling-1
+kubectl rollout history deploy nginx-rolling-1 --revision=1
+kubectl rollout undo deploy nginx-rolling-1
+kubectl rollout undo deploy nginx-rolling-1 --to-revision=2
+
+kubectl rollout resume|pause deployment nginx-rolling-1
+
+# Deployment object best practices
+## Use declarative object management for Deployments
+## Do not use the Recreate strategy for production workloads
+## Do not create Pods that match an existing Deployment label selector
+## Carefully set up your container readiness probes 
+### setup httpGet readiness probe; /health endpoint ; probe timeouts for external integrations
+## Carefully set up your container liveness probes
+### Execute simple and fast checks that determine the status of the process, not its dependencies
+### Use conservative settings for initialDelaySeconds to avoid any premature container restarts and falling into a restart loop
+## Use meaningful and semantic image tags
+
+kubectl delete -f dep2-stfull-headless-svc-1.yaml -f dep2-stfull-client-svc-1.yaml -f dep2-stfull-1.yaml
+kubectl describe statefulset nginx-statefulset-1
+k get pv|pvc
+kubectl get pvc nginx-data-nginx-statefulset-1-2
+
+kubectl run -i --tty busybox --image=busybox --rm --restart=Never -- sh
+nslookup nginx-client
+nslookup nginx-headless
+nslookup $pod-$svc.$ns.cluster.local
+nslookup nginx-statefulset-1-0.nginx-headless.default.svc.cluster.local
+wget http://nginx-statefulset-1-0.nginx-headless && cat index.html && rm index.html
+kubectl delete pod nginx-statefulset-1-0
+# same dns works but with different pod ip
+wget http://nginx-statefulset-1-0.nginx-headless && cat index.html && rm index.html
+
+kubectl exec -it nginx-statefulset-1-0 -- /bin/sh -c "echo State of Pod 0 > /usr/share/nginx/html/state.html"
+kubectl exec -it nginx-statefulset-1-1 -- /bin/sh -c "echo State of Pod 1 > /usr/share/nginx/html/state.html"
+kubectl exec -it nginx-statefulset-1-2 -- /bin/sh -c "echo State of Pod 2 > /usr/share/nginx/html/state.html"
+kubectl exec -it nginx-statefulset-1-x -- /bin/sh -c "cat /usr/share/nginx/html/state.html"
+
+kubectl delete pod nginx-statefulset-1-0 nginx-statefulset-1-1 nginx-statefulset-1-2
+
+kubectl apply -f dep2-stfull-1-rollingupdate.yaml --record
+kubectl delete -f dep2-stfull-headless-svc-1.yaml -f dep2-stfull-client-svc-1.yaml -f dep2-stfull-1-rollingupdate.yaml
+kubectl describe sts
+kubectl scale sts nginx-statefulset-1 --replicas=5
+
+
+kubectl rollout status sts nginx-sts-one
+kubectl describe sts nginx-sts-one
+k get pods -w
+kubectl patch sts nginx-sts-one -p '
+    {"spec":{
+        "updateStrategy":{
+            "type":"RollingUpdate","rollingUpdate":{"partition":3}}
+        }
+    }'
+
+kubectl set image deployment nginx-sts-one nginx=nginx:1.18
+
+# Do not set TerminationGracePeriodSeconds as 0 for StatefulSets 
+    # as it will cause immediate termination
+# Scale down StatefulSets to Zero Pods before deleting
+# Do not create Pods that match an existing StatefulSet label selector
+
+# https://kubernetes.io/docs/concepts/configuration/overview/#using-labels
+
+# If you run hybrid Linux-Windows Kubernetes clusters, one of the common use cases 
+# for Node selectors or Node affinity for DaemonSets is ensuring that the Pods are 
+# scheduled only on Linux Nodes or only on Windows Nodes. This makes sense as the 
+# container runtime and operating system are very different between such Nodes.
+
+kubectl run -i --tty busybox --image=busybox:1.28 --rm --restart=Never -- sh
+nslookup nginx-daemon-headless 
+    # 10-244-120-88.nginx-daemon-headless.default.svc.cluster.local
+    # daemonset pod ip 
+wget http://10-244-120-88.nginx-daemon-headless && cat index.html
+
+kubectl rollout status ds nginx-daemonset-example
+kubectl describe ds nginx-daemonset-example
+
+/* # when to use DaemonSet
+Depending on your cluster deployment, the kube-proxy core service may be deployed as a DaemonSet instead of a regular operating system service. For example, in the case of Azure Kubernetes Service (AKS), you can see the definition of this DaemonSet using the kubectl describe ds -n kube-system kube-proxy command. This is a perfect example of a backbone service that needs to run as a singleton on each Node in the cluster. You can also see an example YAML manifest for kube-proxy here: https://github.com/kubernetes/kubernetes/blob/master/cluster/addons/kube-proxy/kube-proxy-ds.yaml.
+Another example of fundamental services running as DaemonSets is running an installation of Container Network Interface (CNI) plugins and agents for maintaining the network in a Kubernetes cluster. A good example of such a DaemonSet is the Flannel agent (https://github.com/flannel-io/flannel/blob/master/Documentation/kube-flannel.yml), which runs on each Node and is responsible for allocating a subnet lease to each host out of a larger, preconfigured address space. This of course depends on what type of networking is installed on the cluster.
+Cluster storage daemons will be often deployed as DaemonSets. A good example of a commonly used daemon is Object Storage Daemon (OSD) for Ceph, which is a distributed object, block, and file storage platform. OSD is responsible for storing objects on the local filesystem of each Node and providing access to them over the network. You can find an example manifest file here (as part of a Helm Chart template): https://github.com/ceph/ceph-container/blob/master/examples/helm/ceph/templates/osd/daemonset.yaml.
+Ingress controllers in Kubernetes are sometimes deployed as DaemonSets. We will take a closer look at Ingress in Chapter 21, Advanced Traffic Routing with Ingress. For example, when you deploy nginx as an Ingress controller in your cluster, you have an option to deploy it as a DaemonSet: https://github.com/nginxinc/kubernetes-ingress/blob/master/deployments/daemon-set/nginx-ingress.yaml. Deploying an Ingress controller as a DaemonSet is especially common if you do Kubernetes cluster deployments on bare-metal servers.
+Log gathering and aggregation agents are often deployed as DaemonSets. For example, fluentd can be deployed as a DaemonSet in a cluster. You can find multiple YAML manifest files with examples in the official repository: https://github.com/fluent/fluentd-kubernetes-daemonset.
+Agents for collecting Node metrics make a perfect use case for deployment as DaemonSets. A well-known example of such an agent is Prometheus node-exporter: https://github.com/prometheus-operator/kube-prometheus/blob/main/manifests/node-exporter-daemonset.yaml.
+*/
+
+/* # Alternatives to DaemonSet 
+In log-gathering scenarios, you need to evaluate if you want to design your log pipeline architecture based on DaemonSets or the sidecar container pattern. Both have their advantages and disadvantages, but in general, running sidecar containers may be easier to implement and be more robust, even though it may require more system resources.
+If you just want to run periodic tasks, and you do not need to do it on each Node in the cluster, a better solution can be using Kubernetes CronJobs. Again, it is important to know what the actual use case is and whether running a separate Pod on each Node is a must-have requirement.
+Operating system daemons (for example, provided by systemd in Ubuntu) can be used to do similar tasks as DaemonSets. The drawback of this approach is that you cannot manage these native daemons using the same tools as you manage Kubernetes clusters with, for example kubectl. But at the same time, you do not have the dependency on any Kubernetes service, which may be a good thing in some cases.
+Static Pods (https://kubernetes.io/docs/tasks/configure-pod-container/static-pod/) can be used to achieve a similar result. This type of Pod is created based on a specific directory watched by kubelet for static manifest files. Static Pods cannot be managed using kubectl and they are most useful for cluster bootstraping functions.
+*/
+
+docker run -i --tty --rm mcr.microsoft.com/dotnet/samples --entrypoint "pwsh.exe"
+docker run -i --tty --rm mcr.microsoft.com/dotnet/aspnet --entrypoint "pwsh.exe"
+docker run -it --rm -p 8000:80 --name aspnetcore_sample mcr.microsoft.com/dotnet/samples:aspnetapp
+
+# https://docs.bitnami.com/kubernetes/get-started-kubernetes/
+helm search hub
+helm repo add bitnami https://charts.bitnami.com/bitnami
+helm install wordpress bitnami/wordpress --dry-run --debug
+helm install wordpress bitnami/wordpress --set mariadb.image=bitnami/mariadb:10.1.21-r0 --set serviceType=NodePort
+helm install wordpress bitnami/wordpress --set serviceType=NodePort
+kubectl port-forward --address 0.0.0.0 service/wordpress 8080:80 8443:443
+helm delete wordpress
+
+k get serviceaccount
+
+kubectl get pods --namespace default --output=custom-columns="NAME:.metadata.name,STATUS:.status.phase,NODE:.spec.nodeName"
+kubectl get nodes
+kubectl describe node kind-control-plane
+kubectl get node kind-control-plane -o yaml
+kubectl get pods -A
+kubectl logs kube-scheduler-kind-control-plane  -n kube-system
+
+kubectl label nodes kind-worker node-zone=availabilityset
+kubectl label nodes kind-worker2 node-zone=availabilityset
+
+https://kubernetes.io/docs/concepts/services-networking/service-topology/#using-service-topology
+
+kubectl taint node kind-worker2 machine-check-exception=memory:NoExecute
+kubectl rollout restart deploy nginx-deployment-example
+
+https://github.com/OctopusSamples/OctopusHelmChart
+
+kubectl top pod
+

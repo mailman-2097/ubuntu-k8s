@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  # will be acquired by ReplicaSet and auto terminated
+  # modifying pod labels can cause pods to be removed from ReplicaSet 
+  name: nginx-will-be-acquired
+  labels:
+    app: nginx
+    environment: test
+spec:
+  containers:
+  - name: nginx
+    image: nginx:1.17
+    ports:
+    - containerPort: 80

@@ -1,0 +1,55 @@
+
+# https://github.com/kevincloud/terraform-jenkins-pipeline
+
+# https://docs.microsoft.com/en-us/azure/architecture/solution-ideas/articles/immutable-infrastructure-cicd-using-jenkins-and-terraform-on-azure-virtual-architecture-overview
+
+# jenkins get installed plugins
+# http://192.168.10.10:30000/script
+# https://www.jenkins.io/doc/book/managing/script-console/
+# https://stackoverflow.com/questions/9815273/how-to-get-a-list-of-installed-jenkins-plugins-with-name-and-version-pair
+
+# Jenkins on k8s
+# https://www.jenkins.io/doc/book/installing/kubernetes/#install-jenkins-with-yaml-files
+
+kubectl create namespace jenkins
+kubectl get namespaces
+kubectl create -f deployment.yaml -n jenkins
+kubectl create -f service.yaml -n jenkins
+kubectl get deployments -n jenkins
+kubectl describe -n jenkins deployment.apps/jenkins
+kubectl get services -n jenkins
+kubectl describe -n jenkins service/jenkins
+kubectl get pods -n jenkins
+kubectl logs jenkins-84bf9fbfd-f7qfc -n jenkins -f
+# 52d80259cfe54b3692ac9d4e1b56c5b2
+kubectl port-forward --address 0.0.0.0 service/jenkins 30000:8080 -n jenkins
+kubectl delete -f service.yaml -n jenkins
+kubectl delete -f deployment.yaml -n jenkins
+
+kubectl delete -f deployment.yaml -f service.yaml -n jenkins
+
+# https://minikube.sigs.k8s.io/docs/handbook/mount/
+# minikube mount /vagrant:/host
+
+docker pull jenkins/jenkins:lts-jdk11
+minikube docker-env
+docker build -t jenkins-k8s-lts-jdk11:1.0 .
+minikube ssh docker images
+kubectl cluster-info
+kubectl get pods -n jenkins | grep jenkins
+kubectl describe pod -n jenkins 
+
+minikube service --all
+minikube service service-name --url
+
+kubectl create namespace jenkins
+kubectl apply -f jenkins-robot.yaml --namespace=jenkins
+kubectl describe secret $(kubectl describe serviceaccount jenkins --namespace=jenkins | grep Tokens | awk '{print $2}') --namespace=jenkins
+kubectl create rolebinding jenkins-admin-binding --clusterrole=admin --serviceaccount=jenkins:jenkins-robot --namespace=jenkins
+
+kubectl apply -f jenkins-endpoint.yaml -n jenkins
+kubectl describe service/agent-pool -n jenkins
+
+kind get kubeconfig --name agentpool
+curl -k https://192.168.20.21:6443/api # OK
+

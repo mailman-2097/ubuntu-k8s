@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: two-containers-with-empty-dir
+spec:
+  containers:
+    - name: nginx-container
+      image: nginx:latest
+      volumeMounts:
+      - mountPath: /var/empty-dir-volume-path
+        name: empty-dir-volume
+    - name: busybox-container
+      image: busybox:latest
+      command: ["/bin/sh"]
+      args: ["-c", "while true; do sleep 30; done;"] # Prevents busybox from exiting after completion
+      volumeMounts:
+      - mountPath: /var/empty-dir-volume-path
+        name: empty-dir-volume
+  volumes:
+  - name: empty-dir-volume # name of the volume
+    emptyDir: {} # Initialize an empty directory # The path on the worker node. 

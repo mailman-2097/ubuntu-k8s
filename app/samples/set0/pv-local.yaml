@@ -1,0 +1,30 @@
+# ~/pv-hostpath.yaml
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: pv-local
+spec:
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteOnce
+  capacity:
+    storage: 1Gi
+  storageClassName: local-storage
+  hostPath:
+    path: /var
+    type: Directory
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+      - matchExpressions:
+        - key: kubernetes.io/hostname # this field is not validated at creation time
+          operator: In
+          values:
+          - minikube # this field is not validated at creation time
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: local-storage
+provisioner: kubernetes.io/no-provisioner
+volumeBindingMode: WaitForFirstConsumer

@@ -1,0 +1,49 @@
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx-readiness-http
+spec:
+  containers:
+  - name: nginx-readiness-http
+    image: nginx
+    readinessProbe:
+      initialDelaySeconds: 5
+      periodSeconds: 5
+      httpGet:
+        path: /ready
+        port: 80
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx-pod-with-liveness-http
+spec:
+  containers:
+  - name: nginx-pod-with-liveness-http
+    image: nginx
+    livenessProbe:
+      initialDelaySeconds: 5
+      periodSeconds: 5
+      httpGet:
+        path: /healthcheck # HTTP >= 200 and < 400
+        port: 80
+        httpHeaders:
+        - name: My-Custom-Header
+          value: My-Custom-Header-Value
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx-pod-with-liveness-command
+spec:
+  containers:
+  - name: nginx-pod-with-liveness-command
+    image: nginx
+    livenessProbe:
+      initialDelaySeconds: 5
+      periodSeconds: 5
+      exec:
+        command: # on pod
+        - cat
+        - /hello/world    

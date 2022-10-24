@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-headless
+spec:
+  selector:
+    app: nginx-stateful
+    environment: test
+  clusterIP: None # Will result in creation of headless service
+  ports:
+  - port: 80
+    protocol: TCP
+    targetPort: 80

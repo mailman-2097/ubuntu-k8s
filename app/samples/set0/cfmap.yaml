@@ -1,0 +1,21 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: genericmap
+data:
+  config.yaml: |
+    tags:
+    - db: msql
+    - cloud=kind
+    - production=true
+    hello:
+    - world
+  env.dev: |
+    db=msql
+    cloud=kind
+    production=true
+    hello=world
+  stack: "blue"
+  version: "1"
+  environment: "dev"

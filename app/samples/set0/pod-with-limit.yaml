@@ -1,0 +1,37 @@
+# ~/Pod-in-namespace-with-request-and-limit.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx-with-request-and-limit
+  namespace: default
+spec: 
+  containers:
+  - name: nginx
+    image: nginx:latest
+    resources:
+      requests:
+        memory: "512Mi"
+        cpu: "250m"
+      limits:
+        memory: "1Gi"
+        cpu: "1000m"
+---
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: my-limitrange
+spec: 
+  limits:
+  - default:
+      memory: 256Mi
+      cpu: 500m
+    defaultRequest:
+      memory: 128Mi
+      cpu: 250Mib
+    max:
+      memory: 1000Mi
+      cpu: 1Gib
+    min:
+      memory: 128Mi
+      cpu: 250m
+    type: Container

@@ -1,0 +1,13 @@
+# for reference
+apiVersion: v1
+kind: PersistentVolume
+metdata:
+  name: persistent-volume-ebs
+spec:
+  capacity:
+    storage: 2Gi
+  accessModes:
+    - ReadWriteOnce
+  awsElasticBlockStore:
+    volumeId: vol-xxxx
+    fsType: ext4

@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+  name: nginx-reps-1
+spec:
+  replicas: 2
+  selector:
+    # Possible to acquire existing Pods with labels matching the ReplicaSet
+    matchLabels:
+      app: nginx
+    matchExpressions:
+    - key: environment
+      operator: In
+      values:
+      - test
+      - dev
+  template:
+    metadata:
+      labels:
+        # Labels used in metadata must match the selector label query
+        app: nginx
+        environment: test
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:1.17
+        ports:
+        - containerPort: 80
